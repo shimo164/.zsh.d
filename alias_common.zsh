@@ -17,8 +17,8 @@ alias aa='cd ../..'
 alias aaa='cd ../../..'
 
 alias ls='ls --color=auto'
-alias lla='ls -lah'
-alias lls='ls -ltrh'
+alias ll='ls -ltrh'
+alias lla='ls -ltrha'
 alias lld='du -hs $(ls -AF) | sort --human-numeric-sort'  # sort by numrica value
 alias llt='du -hs --time $(ls -AF) | sort -k 2,2'  # sort by time
 
@@ -36,7 +36,7 @@ alias gst='git status'
 alias glo='git log --oneline -n 5'
 alias gloo='git log -n 1'
 
-alias fz='bash $SCRIPTS/fzf_alias_commands.sh'
+alias ff='bash $SCRIPTS/fzf_alias_commands.sh'
 alias gg='bash $SCRIPTS/git_branch_checkout.sh'
 
 alias zrc='bash $SCRIPTS/open_zsh_files.sh'
