@@ -1,93 +1,130 @@
-show_current_branch_and_stash() {
-    current_branch=$(git rev-parse --abbrev-ref HEAD)
-    echo Current branch: $current_branch
+#!/usr/bin/env bash
+
+display_current_branch_and_stashes() {
+    local current_branch=$(git rev-parse --abbrev-ref HEAD)
+    echo "Current branch: $current_branch"
     git stash list
     echo
 }
 
 get_stash_number_and_message() {
-    # $1: stash@{n} or stash@{n} or stash@{n}
+    # $1 could be something like "stash@{n}"
+    # If no $1 is provided, default to stash@{0}
 
-    STASH_NUM=$(echo $@ | sed -n 's/^stash@{*\([0-9]*\)}/\1/p')
-    if [ -z "$STASH_NUM" ]; then
-      STASH_NUM=0
+    local raw_input="$*"
+    local STASH_NUM
+    local STASH_MSG
+
+    if [ -z "$raw_input" ]; then
+        raw_input="stash@{0}"
     fi
 
-    STASH_MSG=$(git stash list | grep "stash@{${STASH_NUM}}" | awk -F": " '{print $3}')
+    # Extract stash number from input
+    STASH_NUM=$(echo "$raw_input" | sed -n 's/^stash@{*\([0-9]*\)}/\1/p')
+    if [ -z "$STASH_NUM" ]; then
+        STASH_NUM=0
+    fi
 
+    # Grab the stash message
+    STASH_MSG=$(git stash list | grep "stash@{${STASH_NUM}}" | awk -F": " '{print $3}')
     echo "$STASH_NUM" "$STASH_MSG"
 }
 
-
 prompt_and_execute_command() {
-    # If user inputs 'y', then execute command
-    # If user inputs 'n', then abort
-    # If user inputs other, then prompt again
-    # $1: prompt message
-    # $2: command to execute
+    # Prompts the user to confirm a command, then executes if 'y'/'Y' is chosen.
+    # $1: Prompt message
+    # $2: Actual command to execute
 
-    local prompt_message=$1
-    local command_to_execute=$2
-    echo $prompt_message
-    echo $command_to_execute
+    local prompt_message="$1"
+    local command_to_execute="$2"
 
     while true; do
         echo -n "$prompt_message [y/N]: "
-        read ANS
-        case $ANS in
+        read -r ANS
+        case "$ANS" in
             [Yy]* )
-                eval "command $command_to_execute"
+                eval "$command_to_execute"
                 return 0
                 ;;
-            [Nn]* )
-                echo "Abort..."
+            [Nn]* | "" )
+                echo "Aborted."
                 return 1
                 ;;
             * )
+                # Keep prompting if not recognized
                 ;;
         esac
     done
 }
 
-
-# Avoid git accidentally
+# Override the 'git' command (use with caution).
 git() {
-  if [[ $1 == "stash" && $2 == "pop" ]]; then
+    if [[ $1 == "stash" && $2 == "pop" ]]; then
+        display_current_branch_and_stashes
+        read -r STASH_NUM STASH_MSG <<< "$(get_stash_number_and_message "$3")"
+        prompt_and_execute_command \
+            "Pop stash@{${STASH_NUM}}: '${STASH_MSG}'. Continue?" \
+            "command git stash pop stash@{${STASH_NUM}}"
 
-    show_current_branch_and_stash
-    read STASH_NUM STASH_MSG <<< $(get_stash_number_and_message $3)
-    prompt_and_execute_command \
-    "pop stash@{${STASH_NUM}} ${STASH_MSG}. OK?" \
-    "git stash pop stash@{${STASH_NUM}}"
+    elif [[ $1 == "stash" && $2 == "apply" ]]; then
+        display_current_branch_and_stashes
+        read -r STASH_NUM STASH_MSG <<< "$(get_stash_number_and_message "$3")"
+        prompt_and_execute_command \
+            "Apply stash@{${STASH_NUM}}: '${STASH_MSG}'. Continue?" \
+            "command git stash apply stash@{${STASH_NUM}}"
 
-  elif [[ $1 == "stash" && $2 == "apply" ]]; then
+    elif [[ $* == "stash clear" ]]; then
+        display_current_branch_and_stashes
+        prompt_and_execute_command \
+            "Clear all stashes? This is irreversible. Continue?" \
+            "command git stash clear"
 
-    read STASH_NUM STASH_MSG <<< $(get_stash_number_and_message $3)
-    prompt_and_execute_command \
-    "apply stash@{${STASH_NUM}} ${STASH_MSG}. OK?" \
-    "git stash apply stash@{${STASH_NUM}}"
+    # If 'git stash' with no subcommand, then stash with custom comment (branch + commit ID + date)
+    elif [[ $1 == "stash" && $2 == "-m" ]]; then
+        # Check if there are changes to be stashed
+        if git status --porcelain | grep -q '^[ MADRCU]'; then
+            shift 2  # Remove the first two arguments
+            local user_message="$*"
+            local current_branch=$(git rev-parse --abbrev-ref HEAD)
+            local short_hash=$(git rev-parse --short HEAD)
+            local current_date=$(date +"%m/%d %H:%M")
+            local message="On ${current_branch}: ${short_hash} ${current_date} ${user_message}"
+            local save_command="git stash save -u \"${message}\""
 
-  elif [[ $@ == "stash clear" ]]; then
-    show_current_branch_and_stash
-    prompt_and_execute_command \
-    "CLEAR git stash OK?" \
-    "git stash clear"
+            prompt_and_execute_command \
+                "Stash changes with comment '${message}'?" \
+                "$save_command"
+        else
+            echo "No changes to stash."
+            return 1
+        fi
 
-  elif [[ $@ == "stash" ]]; then
-    local current_date=$(date +"%m/%d %H:%M")
-    local command_to_execute="git stash save -u \"${current_date}\""
-    prompt_and_execute_command \
-    "Are you sure to save stash with comment?" \
-    "$command_to_execute"
+    elif [[ $* == "stash" ]]; then
+        # Check if there are changes to be stashed
+        if git status --porcelain | grep -q '^[ MADRCU]'; then
+            local current_branch=$(git rev-parse --abbrev-ref HEAD)
+            local short_hash=$(git rev-parse --short HEAD)
+            local current_date=$(date +"%m/%d %H:%M")
+            local message="On ${current_branch}: ${short_hash} ${current_date}"
+            local save_command="git stash save -u \"${message}\""
 
- elif [[ $1 == "reset" ]]; then
-    local command_to_execute="git ${@}"
-    prompt_and_execute_command \
-    "Are you sure you want to execute '${command_to_execute}'?" \
-    "$command_to_execute"
+            prompt_and_execute_command \
+                "Stash changes with comment '${message}'?" \
+                "$save_command"
+        else
+            echo "No changes to stash."
+            return 1
+        fi
 
-  else
-    # Execute other git commands
-    command git "$@"
-  fi
+    elif [[ $1 == "reset" ]]; then
+        # IMPORTANT: Call the real 'git reset' with 'command' so we don't invoke our override again
+        local reset_command="command git $*"
+        prompt_and_execute_command \
+            "Are you sure you want to run '$reset_command'?" \
+            "$reset_command"
+
+    else
+        # Execute other git commands normally
+        command git "$@"
+    fi
 }
