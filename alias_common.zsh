@@ -38,9 +38,9 @@ alias sudo='sudo '
 alias tf='terraform'
 
 alias cc='cd_history'  # cd to history path. Used with cd_history.zsh.
-alias ff='bash $SCRIPTS/fzf_alias_commands.sh'
-alias gg='bash $SCRIPTS/git_branch_checkout.sh'
-alias zrc='bash $SCRIPTS/open_zsh_files.sh'
+alias ff='bash $MY_UTILS/fzf_alias_commands.sh'
+alias gg='bash $MY_UTILS/git_branch_checkout.sh'
+alias zrc='bash $MY_UTILS/open_zsh_files.sh'
 alias zrs='source ~/.zshrc'
 
 # BEGIN: expand alias with space key
