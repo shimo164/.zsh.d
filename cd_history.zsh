@@ -1,4 +1,4 @@
-export history_keep_num=3
+export history_keep_num=1000
 
 # Wrapper function for the 'cd' command
 function cd() {
