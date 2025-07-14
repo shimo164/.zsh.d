@@ -1,6 +1,6 @@
 # What
 
-- Splitted zsh files for `.zshrc`.
+- Split zsh files for `.zshrc`.
 - Create symbolic link of .zshrc
   - `ln -s ~/.zsh.d/zshrc ~/.zshrc`
   - `source ~/.zshrc`

@@ -2,8 +2,8 @@
 # Read from .zshrc and .zsh.d/*zsh files
 ZSHHOME="${HOME}/.zsh.d"
 
-if [ -d $ZSHHOME -a -r $ZSHHOME -a \
-  -x $ZSHHOME ]; then
+if [ -d "$ZSHHOME" -a -r "$ZSHHOME" -a \
+  -x "$ZSHHOME" ]; then
 
   # Source the .profile.zsh file first
   profile_zsh="$ZSHHOME/profile.zsh"

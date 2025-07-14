@@ -15,7 +15,7 @@ alias la='ls -ltrha'
 alias ls='ls --color=auto'
 alias lld='du -hs $(ls -AF) | sort --human-numeric-sort'  # sort by numrica value
 alias llt='du -hs --time $(ls -AF) | sort -k 2,2'  # sort by time
-alias g='gcloud'
+alias g='git'
 alias gc='gcloud'
 alias ga='git add --all'
 alias gaa='git add $(git rev-parse --show-toplevel)'  # git add all files in the git root directory
