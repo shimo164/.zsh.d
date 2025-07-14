@@ -48,6 +48,8 @@ function zshaddhistory_1() {
 
 autoload -Uz add-zsh-hook
 # add-zsh-hook zshaddhistory zshaddhistory_1
+# TODO: zshaddhistory is called before command result is available,
+# so we cannot use it to check command status. We use precmd instead.
 add-zsh-hook precmd precmd_1
 add-zsh-hook precmd zshaddhistory_1
 # add-zsh-hook preexec preexec_1
