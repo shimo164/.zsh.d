@@ -11,34 +11,11 @@ function fzf-select-history() {
   # 履歴を取得し、表示用にクリーンアップ
   local cleaned_history=$(get_cleaned_history)
 
-  # fzfで履歴を選択（BackspaceとDeleteキーバインドを追加）
+  # fzfで履歴を選
   selected_command=$(echo "$cleaned_history" | fzf \
     --query "$LBUFFER" \
-    --reverse \
-    --expect=bs,del \
-    --header="Enter: Execute | Backspace/Delete: Remove from history" \
-    --bind="bs:accept,del:accept")
-
-  # 結果を解析
-  action=$(echo "$selected_command" | head -1)
-  selected_command=$(echo "$selected_command" | tail -1)
-
-  if [[ -n "$selected_command" ]]; then
-    if [[ "$action" == "bs" || "$action" == "del" ]]; then
-      # BackspaceまたはDeleteが押された場合：履歴から削除
-      if delete_from_history "$selected_command"; then
-        echo "Deleted from history: $selected_command"
-      else
-        echo "Failed to delete: $selected_command"
-      fi
-      # 再度fzfを呼び出す
-      fzf-select-history
-    else
-      # Enterが押された場合：コマンドを実行
-      BUFFER="$selected_command"
-      CURSOR=$#BUFFER
-    fi
-  fi
+    --reverse)
+  --header="Enter: Execute"
 
   zle reset-prompt
 }
@@ -52,94 +29,6 @@ function get_cleaned_history() {
     -e 's/\x1b//g'
 }
 
-# 履歴から特定のコマンドを削除する関数
-function delete_from_history() {
-  local command_to_delete="$1"
-  local history_file="$HOME/.zsh_history"
-  local temp_file=$(mktemp)
-  local success=false
-
-  if [[ ! -f "$history_file" ]]; then
-    echo "History file not found: $history_file"
-    return 1
-  fi
-
-  # 削除前の行数を確認
-  local before_count=$(wc -l < "$history_file")
-
-  # コマンドを正規化（特殊文字を除去）
-  local normalized_command=$(normalize_command "$command_to_delete")
-
-  # 削除処理
-  awk -v cmd="$command_to_delete" -v norm_cmd="$normalized_command" '
-  {
-    line = $0
-    should_keep = 1
-
-    # セミコロン以降のコマンド部分を取得
-    if (index(line, ";") > 0) {
-      command_part = substr(line, index(line, ";") + 1)
-      normalized_part = normalize_awk_command(command_part)
-
-      # マッチング条件
-      if (command_part == cmd || normalized_part == norm_cmd ||
-          command_part == norm_cmd || normalized_part == cmd) {
-        should_keep = 0
-      }
-    }
-
-    if (should_keep) {
-      print line
-    }
-  }
-
-  function normalize_awk_command(cmd) {
-    gsub(/\[200~/, "", cmd)
-    gsub(/\[201~/, "", cmd)
-    gsub(/\^\[/, "", cmd)
-    gsub(/\x1b/, "", cmd)
-    return cmd
-  }
-  ' "$history_file" > "$temp_file"
-
-  # 削除後の行数を確認
-  local after_count=$(wc -l < "$temp_file")
-  local deleted_count=$((before_count - after_count))
-
-  if [[ -s "$temp_file" ]] && [[ $deleted_count -gt 0 ]]; then
-    mv "$temp_file" "$history_file"
-    fc -R "$history_file"  # 現在のセッションの履歴も更新
-    success=true
-  else
-    rm -f "$temp_file"
-  fi
-
-  $success
-}
-
-# コマンドを正規化する関数
-function normalize_command() {
-  echo "$1" | sed \
-    -e 's/\[200~//g' \
-    -e 's/\[201~//g' \
-    -e 's/\^\[//g' \
-    -e 's/\x1b//g'
-}
-
 zle -N fzf-select-history
 bindkey '^r' fzf-select-history
 # END: fzf history
-
-# BEGIN: fzf cdr
-function fzf-cdr() {
-  local selected_dir=$(cdr -l | awk '{ print $2 }' | fzf --reverse)
-  if [ -n "$selected_dir" ]; then
-    BUFFER="cd ${selected_dir}"
-    zle accept-line
-  fi
-  zle clear-screen
-}
-zle -N fzf-cdr
-setopt noflowcontrol # Prevent Ctrl+Q from freezing the terminal; needed for custom keybinding
-bindkey '^q' fzf-cdr
-# END: fzf cdr
