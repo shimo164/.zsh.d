@@ -1,7 +1,6 @@
 # BEGIN: split zsh
 # Read from .zshrc and .zsh.d/*zsh files
 ZSHHOME="${HOME}/.zsh.d"
-
 if [ -d "$ZSHHOME" -a -r "$ZSHHOME" -a \
   -x "$ZSHHOME" ]; then
 
@@ -12,7 +11,7 @@ if [ -d "$ZSHHOME" -a -r "$ZSHHOME" -a \
   fi
 
   # Source the remaining zsh files
-  for i in $ZSHHOME/*; do
+  for i in $ZSHHOME/*.zsh; do
     if [ "$i" != "$profile_zsh" ]; then
       [[ ${i##*/} = *.zsh ]] && [ \( -f $i -o -h $i \) -a -r $i ] && . $i
     fi
