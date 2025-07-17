@@ -1,3 +1,7 @@
+This repos is merged into https://github.com/shimo164/.my_utils
+
+---
+
 # Zsh Configuration
 
 Modular zsh configuration with organized file structure and enhanced functionality.
